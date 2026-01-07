@@ -4,6 +4,23 @@
   "description": "The Agent-Optimized Legal Tech Starter Kit",
   "private": false,
   "license": "Apache-2.0",
+  "bin": {
+    "create-legal-app": "./bin/create-legal-app.mjs"
+  },
+  "files": [
+    "bin",
+    "app",
+    "components",
+    "lib",
+    "public",
+    "skills",
+    "*.json",
+    "*.ts",
+    "*.mjs",
+    "*.md",
+    "*.css",
+    ".env.example"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
