@@ -4,9 +4,94 @@
 
 This skill covers authentication, authorization, and access control using Better Auth in Next.js 15+ legal applications. It includes a discovery framework for understanding user requirements before implementation, communication guidelines for non-technical users, and implementation patterns for common legal tech scenarios.
 
+---
+
+## STOP: What Already Exists
+
+**The starter app ships with auth fully pre-configured. DO NOT recreate these files:**
+
+### Pre-configured files (already exist - use them):
+- `lib/auth/index.ts` - Server auth config (Better Auth)
+- `lib/auth/client.ts` - Client auth hooks (`useSession`, `signIn`, `signOut`)
+- `lib/auth/permissions.ts` - Role and permission definitions
+- `lib/auth/roles.ts` - Legal role hierarchy
+- `app/api/auth/[...all]/route.ts` - Auth API handler
+- `app/(auth)/login/page.tsx` - Login page (route group)
+- `app/(auth)/signup/page.tsx` - Signup page (route group)
+- `components/auth/login-form.tsx` - Login form component
+- `components/auth/signup-form.tsx` - Signup form component
+- `middleware.ts` - Route protection (public-by-default)
+
+### CRITICAL: Route Groups
+Auth pages use Next.js route groups: `app/(auth)/login/page.tsx`
+- The `(auth)` folder is a route group - it provides layout without affecting the URL
+- The URL is `/login`, NOT `/(auth)/login`
+- **NEVER create `app/login/page.tsx`** - it will conflict with the existing route group
+
+---
+
+## Quick Start (Simple Auth)
+
+For simple email/password auth without roles or multi-tenancy:
+
+### 1. Protect routes (edit `middleware.ts`)
+
+```typescript
+// Add routes that require login to this array:
+const protectedRoutes = [
+  "/",           // Protect home page
+  "/dashboard",
+  "/settings",
+];
+```
+
+### 2. Check auth state in components
+
+```typescript
+"use client";
+import { useSession } from "@/lib/auth/client";
+
+export function MyComponent() {
+  const { data: session, isPending } = useSession();
+  
+  if (isPending) return <div>Loading...</div>;
+  if (!session) return <div>Not logged in</div>;
+  
+  return <div>Hello, {session.user.name}!</div>;
+}
+```
+
+### 3. Add sign out button
+
+```typescript
+"use client";
+import { signOut } from "@/lib/auth/client";
+
+export function SignOutButton() {
+  return (
+    <button onClick={() => signOut()}>
+      Sign Out
+    </button>
+  );
+}
+```
+
+**That's it.** The login/signup pages, API routes, and session management are already configured.
+
+### When to read further
+
+Skip to the Discovery Framework below only if you need:
+- Multiple user roles (partner, associate, client, etc.)
+- Multi-tenant/organization support
+- OAuth providers (Google, Microsoft)
+- 2FA requirements
+- Custom auth flows
+
+---
+
 ## Important: Discovery First
 
-**Do not implement auth without understanding the user's needs.** Auth requirements vary dramatically based on the type of application being built. Always run through the discovery phase before writing any code.
+**Do not implement COMPLEX auth without understanding the user's needs.** Auth requirements vary dramatically based on the type of application being built. For anything beyond simple email/password auth, run through the discovery phase before writing any code.
 
 ---
 
