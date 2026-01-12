@@ -16,11 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Generate package-lock.json
+        run: npm i --package-lock-only --ignore-scripts
 
       - name: Run security audit
-        run: bun pm scan
+        run: npm audit --audit-level=high
