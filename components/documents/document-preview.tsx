@@ -361,18 +361,26 @@ export function DocumentPreview({
             Document Preview
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div 
-            className="prose prose-sm max-w-none bg-white border rounded-lg p-8 shadow-inner"
-            style={{
-              fontFamily: "'Times New Roman', Times, serif",
-              minHeight: '500px',
-            }}
-          >
-            <div 
-              dangerouslySetInnerHTML={{ __html: htmlContent }}
-              className="document-preview"
-            />
+        <CardContent className="bg-muted/30 p-6 rounded-lg">
+          <div className="flex justify-center">
+            <div
+              className="prose prose-sm bg-white border rounded-lg p-12 shadow-lg w-full max-w-[8.5in] overflow-y-auto"
+              style={{
+                fontFamily: "'Times New Roman', Times, serif",
+                maxHeight: '800px',
+              }}
+            >
+              <div
+                dangerouslySetInnerHTML={{ __html: htmlContent }}
+                className="document-preview"
+                style={{
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                  maxWidth: '100%',
+                }}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

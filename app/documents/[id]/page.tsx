@@ -7,11 +7,12 @@
  * Loads document from IndexedDB by ID.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   ArrowLeft,
   SpinnerGap,
@@ -21,6 +22,8 @@ import {
   Trash,
   Calendar,
   Tag,
+  Check,
+  X,
 } from '@phosphor-icons/react';
 import { DocumentPreview } from '@/components/documents/document-preview';
 import { getDocument, deleteDocument, updateDocument } from '@/lib/storage/document-db';
@@ -37,6 +40,9 @@ export default function DocumentViewPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Load document on mount
   useEffect(() => {
@@ -102,6 +108,47 @@ export default function DocumentViewPage() {
     }
   }, [document]);
 
+  // Start editing title
+  const handleStartEditTitle = useCallback(() => {
+    if (!document) return;
+    setEditedTitle(document.name);
+    setIsEditingTitle(true);
+    setTimeout(() => titleInputRef.current?.focus(), 0);
+  }, [document]);
+
+  // Save edited title
+  const handleSaveTitle = useCallback(async () => {
+    if (!document || !editedTitle.trim()) return;
+
+    try {
+      const updated = await updateDocument(document.id, {
+        name: editedTitle.trim(),
+      });
+      if (updated) {
+        setDocument({ ...document, name: editedTitle.trim(), updatedAt: new Date() });
+      }
+      setIsEditingTitle(false);
+    } catch (err) {
+      console.error('Failed to update title:', err);
+      setError('Failed to update document title');
+    }
+  }, [document, editedTitle]);
+
+  // Cancel title editing
+  const handleCancelEditTitle = useCallback(() => {
+    setIsEditingTitle(false);
+    setEditedTitle('');
+  }, []);
+
+  // Handle title input key events
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveTitle();
+    } else if (e.key === 'Escape') {
+      handleCancelEditTitle();
+    }
+  }, [handleSaveTitle, handleCancelEditTitle]);
+
   // Format date for display
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -160,7 +207,7 @@ export default function DocumentViewPage() {
   if (!document) return null;
 
   return (
-    <div className="container max-w-5xl py-8">
+    <div className="container max-w-5xl mx-auto py-8 px-4">
       {/* Header */}
       <div className="mb-8">
         <Button
@@ -178,8 +225,36 @@ export default function DocumentViewPage() {
             <div className="p-3 rounded-lg bg-primary/10">
               <FileText className="h-8 w-8 text-primary" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">{document.name}</h1>
+            <div className="flex-1">
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    ref={titleInputRef}
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={handleTitleKeyDown}
+                    className="text-2xl font-bold h-auto py-1 px-2"
+                  />
+                  <Button size="sm" variant="ghost" onClick={handleSaveTitle}>
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleCancelEditTitle}>
+                    <X className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <h1 className="text-2xl font-bold">{document.name}</h1>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleStartEditTitle}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <PencilSimple className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
               <p className="text-muted-foreground mt-1">
                 Based on: {document.templateName}
               </p>

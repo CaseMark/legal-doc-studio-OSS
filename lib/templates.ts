@@ -521,7 +521,8 @@ const contractorAgreement: DocumentTemplate = {
           label: 'Payment Terms',
           type: 'select',
           required: true,
-          options: ['net15', 'net30', 'net45', 'upon_completion']
+          options: ['within 15 days', 'within 30 days', 'within 45 days', 'upon completion'],
+          helpText: 'How soon payment is due after invoice is sent'
         },
         {
           id: 'expense_reimbursement',

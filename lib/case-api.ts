@@ -19,7 +19,7 @@ import type {
 // ============================================================================
 
 const CASE_API_BASE_URL = process.env.NEXT_PUBLIC_CASE_API_URL || 'https://api.case.dev';
-const DEFAULT_MODEL = 'anthropic/claude-3-5-sonnet-20241022';
+const DEFAULT_MODEL = 'openai/gpt-4o';
 
 // ============================================================================
 // LLM Chat Completions
@@ -75,32 +75,62 @@ export async function chatCompletion(
  */
 export async function parseNaturalLanguage(
   text: string,
-  variables: TemplateVariable[]
+  variables: TemplateVariable[],
+  templateContext?: { name: string; category: string }
 ): Promise<ParsedInput> {
   const variableDescriptions = variables
-    .map((v) => `- ${v.name} (${v.label}): ${v.type}${v.required ? ' [required]' : ''}${v.helpText ? ` - ${v.helpText}` : ''}`)
+    .map((v) => {
+      let description = v.helpText || '';
+      // Add options info for select fields to help LLM match values
+      if (v.type === 'select' && v.options) {
+        const optionValues = v.options.join(', ');
+        description = description
+          ? `${description}. Valid values: ${optionValues}`
+          : `Valid values: ${optionValues}`;
+      }
+      return `- ${v.name} (${v.type}): ${v.label}${description ? ` - ${description}` : ''}`;
+    })
     .join('\n');
 
-  const systemPrompt = `You are a legal document assistant that extracts structured data from natural language input.
+  // Build template-specific context
+  let templateHint = '';
+  if (templateContext) {
+    templateHint = `\nThis is for a "${templateContext.name}" document (category: ${templateContext.category}).`;
+  }
 
-Given the following template variables:
+  const systemPrompt = `You are a legal document assistant that extracts structured data from natural language input.${templateHint}
+
+Given a user's description, extract values for the following template variables:
 ${variableDescriptions}
 
-Extract values from the user's input and return a JSON object with the variable names as keys.
-Only include variables that you can confidently extract from the input.
-For dates, use ISO format (YYYY-MM-DD).
-For boolean values, use true/false.
-For numbers, use numeric values without formatting.
+Return a JSON object with:
+1. "variables": An object mapping variable names to their extracted values
+2. "confidence": A number from 0 to 1 indicating how confident you are in the extraction
+3. "suggestions": An array of strings suggesting what additional information might be needed
 
-Return ONLY valid JSON, no explanation or markdown.`;
+Rules:
+- Extract ALL variables that can be reasonably inferred from the input
+- Be flexible in matching - for example:
+  - "Acme Corp" could be employer_name, company_name, client_name, landlord_name, party_a_name, etc. depending on context
+  - "$150,000" or "150k" should be extracted as 150000 for salary/currency fields
+  - "California" or "CA" should be extracted for state fields
+  - "full-time" or "full time" should match employment_type
+  - "remote" or "work from home" should match work_location
+- For dates, use ISO format (YYYY-MM-DD)
+- For currency/numbers, extract just the numeric value (no $ or commas)
+- For boolean fields, infer true/false from context (e.g., "with health insurance" = health_insurance: true)
+- For select fields, match to the closest valid option value
+- If a value is ambiguous, don't include it and add a suggestion instead
+
+Return ONLY valid JSON, no other text.`;
 
   const response = await chatCompletion({
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: text },
     ],
-    temperature: 0.1,
-    maxTokens: 1024,
+    temperature: 0,
+    maxTokens: 4096,
   });
 
   if (!response.success || !response.content) {
@@ -112,24 +142,25 @@ Return ONLY valid JSON, no explanation or markdown.`;
   }
 
   try {
+    // Strip markdown code blocks if present
+    let content = response.content.trim();
+    if (content.startsWith('```json')) {
+      content = content.slice(7);
+    } else if (content.startsWith('```')) {
+      content = content.slice(3);
+    }
+    if (content.endsWith('```')) {
+      content = content.slice(0, -3);
+    }
+    content = content.trim();
+
     // Try to parse the JSON response
-    const parsed = JSON.parse(response.content.trim());
-    
-    // Calculate confidence based on how many required variables were extracted
-    const requiredVars = variables.filter((v) => v.required);
-    const extractedRequired = requiredVars.filter((v) => v.name in parsed);
-    const confidence = requiredVars.length > 0 
-      ? extractedRequired.length / requiredVars.length 
-      : 1;
+    const parsed = JSON.parse(content);
 
     return {
-      variables: parsed,
-      confidence,
-      suggestions: confidence < 1 
-        ? requiredVars
-            .filter((v) => !(v.name in parsed))
-            .map((v) => `Please provide: ${v.label}`)
-        : undefined,
+      variables: parsed.variables || {},
+      confidence: parsed.confidence || 0,
+      suggestions: parsed.suggestions || [],
     };
   } catch {
     return {
@@ -235,15 +266,27 @@ export function processTemplate(
   }
 
   // Process conditional blocks: {{#if variableName}}...{{else}}...{{/if}}
-  const conditionalRegex = /\{\{#if\s+(\w+)\}\}([\s\S]*?)(?:\{\{else\}\}([\s\S]*?))?\{\{\/if\}\}/g;
-  processed = processed.replace(conditionalRegex, (match, varName, ifContent, elseContent = '') => {
-    const value = values[varName];
-    const isTruthy = value !== undefined && value !== false && value !== '' && value !== 0;
-    return isTruthy ? ifContent : elseContent;
-  });
+  // Run multiple passes to handle nested conditionals
+  let prevProcessed = '';
+  while (prevProcessed !== processed) {
+    prevProcessed = processed;
+    const conditionalRegex = /\{\{#if\s+(\w+)\}\}([\s\S]*?)(?:\{\{else\}\}([\s\S]*?))?\{\{\/if\}\}/g;
+    processed = processed.replace(conditionalRegex, (match, varName, ifContent, elseContent = '') => {
+      const value = values[varName];
+      const isTruthy = value !== undefined && value !== false && value !== '' && value !== 0;
+      return isTruthy ? ifContent : elseContent;
+    });
+  }
 
   // Clean up any remaining unmatched variables with placeholder
   processed = processed.replace(/\{\{\s*\w+\s*\}\}/g, '[___]');
+
+  // Clean up any remaining template syntax that wasn't processed
+  processed = processed.replace(/\{\{#if\s+\w+\}\}/g, '');
+  processed = processed.replace(/\{\{else\}\}/g, '');
+  processed = processed.replace(/\{\{\/if\}\}/g, '');
+  processed = processed.replace(/\{\{#unless\s+\w+\}\}/g, '');
+  processed = processed.replace(/\{\{\/unless\}\}/g, '');
 
   return processed;
 }

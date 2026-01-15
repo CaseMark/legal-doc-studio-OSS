@@ -25,7 +25,7 @@ interface ChatCompletionRequestBody {
 export async function POST(request: NextRequest) {
   try {
     // Validate API key is configured
-    const apiKey = process.env.CASEDEV_API_KEY;
+    const apiKey = process.env.CASE_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'Case.dev API key not configured' },
@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: body.model || 'anthropic/claude-3-5-sonnet-20241022',
+        model: body.model || 'openai/gpt-4o',
         messages: body.messages,
-        temperature: body.temperature ?? 0.3,
-        max_tokens: body.max_tokens ?? 2048,
+        temperature: body.temperature ?? 0,
+        max_tokens: body.max_tokens ?? 4096,
       }),
     });
 

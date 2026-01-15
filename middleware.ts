@@ -73,6 +73,9 @@ const alwaysPublicRoutes = [
   "/api/auth",      // Better Auth API (required)
   "/api/health",
   "/api/webhooks",
+  "/api/format",    // Document format API
+  "/api/llm",       // LLM chat API
+  "/api/demo",      // Demo config API
 ];
 
 // ============================================================================
