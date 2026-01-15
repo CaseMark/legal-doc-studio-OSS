@@ -39,6 +39,29 @@ interface FormWizardProps {
   onCancel: () => void;
 }
 
+// Helper functions for template-specific examples
+function getPlaceholderForTemplate(templateId: string): string {
+  const placeholders: Record<string, string> = {
+    'employment-agreement': 'Describe the employment details: position, salary, location, benefits...',
+    'nda-mutual': 'Describe the NDA: parties involved, purpose, duration...',
+    'contractor-agreement': 'Describe the contractor engagement: services, rate, duration...',
+    'consulting-agreement': 'Describe the consulting project: scope, fees, timeline...',
+    'lease-agreement': 'Describe the rental: property, rent, lease term...',
+  };
+  return placeholders[templateId] || 'Describe your document details in plain English...';
+}
+
+function getExampleForTemplate(templateId: string): string {
+  const examples: Record<string, string> = {
+    'employment-agreement': 'Software engineer position at Acme Corp in California, $150,000 annual salary, full-time, starting January 15, 2025, with health insurance and 20 days PTO',
+    'nda-mutual': 'NDA between TechCorp Inc (Delaware corporation) and StartupXYZ LLC (California) for discussing a potential acquisition, 2 year term',
+    'contractor-agreement': 'Web development contractor Jane Smith, $100/hour, maximum 80 hours per month, 30-day termination notice, remote work',
+    'consulting-agreement': 'Strategy consulting engagement with McKinsey for digital transformation, $50,000 fixed fee, 3 month project starting March 1',
+    'lease-agreement': '2 bedroom apartment at 123 Main St, San Francisco, $3,500/month rent, 12 month lease starting February 1, $7,000 security deposit',
+  };
+  return examples[templateId] || 'Enter your document details here...';
+}
+
 export function FormWizard({
   template,
   initialValues = {},
@@ -46,11 +69,26 @@ export function FormWizard({
   onCancel,
 }: FormWizardProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
-  const [values, setValues] = useState<Record<string, string | number | boolean>>(initialValues);
+
+  // Initialize values with defaults for boolean fields (default to false/No)
+  const defaultValues = useMemo(() => {
+    const defaults: Record<string, string | number | boolean> = {};
+    for (const section of template.sections) {
+      for (const variable of section.variables) {
+        if (variable.type === 'boolean') {
+          defaults[variable.name] = false;
+        }
+      }
+    }
+    return { ...defaults, ...initialValues };
+  }, [template.sections, initialValues]);
+
+  const [values, setValues] = useState<Record<string, string | number | boolean>>(defaultValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [nlInput, setNlInput] = useState('');
   const [isParsingNL, setIsParsingNL] = useState(false);
   const [nlError, setNlError] = useState<string | null>(null);
+  const [nlSuccess, setNlSuccess] = useState<string | null>(null);
 
   // Get visible sections based on conditional logic
   const visibleSections = useMemo(() => {
@@ -103,17 +141,17 @@ export function FormWizard({
 
     setIsParsingNL(true);
     setNlError(null);
+    setNlSuccess(null);
 
     try {
       const result = await parseNaturalLanguage(nlInput, allVisibleVariables);
-      
-      if (Object.keys(result.variables).length > 0) {
+      const foundCount = Object.keys(result.variables).length;
+      const totalCount = allVisibleVariables.length;
+
+      if (foundCount > 0) {
         setValues((prev) => ({ ...prev, ...result.variables }));
         setNlInput('');
-        
-        if (result.suggestions && result.suggestions.length > 0) {
-          setNlError(`Parsed successfully! ${result.suggestions.join(' ')}`);
-        }
+        setNlSuccess(`Found ${foundCount} out of ${totalCount} fields`);
       } else {
         setNlError('Could not extract any values from your input. Please try being more specific.');
       }
@@ -207,10 +245,10 @@ export function FormWizard({
         {variable.type === 'select' && variable.options && (
           <Select
             value={(value as string) || ''}
-            onValueChange={(val) => handleValueChange(variable.name, val)}
+            onValueChange={(val) => val !== null && handleValueChange(variable.name, val)}
           >
             <SelectTrigger {...commonProps} className="w-full">
-              <SelectValue placeholder={variable.placeholder || 'Select an option'} />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {variable.options.map((option) => (
@@ -310,11 +348,15 @@ export function FormWizard({
         </CardHeader>
         <CardContent className="space-y-3">
           <Textarea
-            placeholder="Example: The employer is Acme Corporation located at 123 Main St, San Francisco. The employee is John Smith starting on January 15, 2024 with a salary of $120,000 per year..."
+            placeholder={getPlaceholderForTemplate(template.id)}
             value={nlInput}
             onChange={(e) => setNlInput(e.target.value)}
             rows={3}
           />
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium">Try this example:</span>{' '}
+            &quot;{getExampleForTemplate(template.id)}&quot;
+          </p>
           <div className="flex items-center justify-between">
             <Button
               variant="secondary"
@@ -335,8 +377,13 @@ export function FormWizard({
               )}
             </Button>
             {nlError && (
-              <p className={`text-xs ${nlError.startsWith('Parsed') ? 'text-green-600' : 'text-destructive'}`}>
+              <p className="text-xs text-destructive">
                 {nlError}
+              </p>
+            )}
+            {nlSuccess && (
+              <p className="text-xs text-green-600 dark:text-green-500">
+                {nlSuccess}
               </p>
             )}
           </div>

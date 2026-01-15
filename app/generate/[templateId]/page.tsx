@@ -2,7 +2,7 @@
 
 /**
  * Generate Document Page
- * 
+ *
  * Multi-step wizard for generating a document from a template.
  * Uses the FormWizard component and saves to IndexedDB.
  */
@@ -11,11 +11,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, SpinnerGap, FileText, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, SpinnerGap, FileText, Warning, ArrowSquareOut } from '@phosphor-icons/react';
 import { FormWizard } from '@/components/documents/form-wizard';
 import { getTemplateById } from '@/lib/templates';
 import { saveDocument } from '@/lib/storage/document-db';
 import { processTemplate } from '@/lib/case-api';
+import { UsageMeter } from '@/components/demo/usage-meter';
+import { DEMO_LIMITS } from '@/lib/demo-limits/config';
+import {
+  getSessionStats,
+  incrementDocumentsGenerated,
+  hasReachedDocumentLimit
+} from '@/lib/demo-limits/session-storage';
 import type { DocumentTemplate, GeneratedDocument } from '@/lib/types';
 
 export default function GeneratePage() {
@@ -27,8 +34,10 @@ export default function GeneratePage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [documentsGenerated, setDocumentsGenerated] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
 
-  // Load template on mount
+  // Load template and session stats on mount
   useEffect(() => {
     const loadTemplate = () => {
       try {
@@ -38,6 +47,11 @@ export default function GeneratePage() {
         } else {
           setError(`Template "${templateId}" not found`);
         }
+
+        // Load session stats
+        const stats = getSessionStats();
+        setDocumentsGenerated(stats.documentsGenerated);
+        setLimitReached(hasReachedDocumentLimit());
       } catch (err) {
         console.error('Failed to load template:', err);
         setError('Failed to load template');
@@ -52,6 +66,13 @@ export default function GeneratePage() {
   // Handle form completion - generate document
   const handleComplete = useCallback(async (values: Record<string, string | number | boolean>) => {
     if (!template) return;
+
+    // Check if limit has been reached
+    if (hasReachedDocumentLimit()) {
+      setLimitReached(true);
+      setError('You have reached the document generation limit for this session.');
+      return;
+    }
 
     setGenerating(true);
     setError(null);
@@ -77,8 +98,12 @@ export default function GeneratePage() {
 
       // Save to IndexedDB
       const saved = await saveDocument(document);
-      
+
       if (saved) {
+        // Increment documents generated count
+        incrementDocumentsGenerated();
+        setDocumentsGenerated(prev => prev + 1);
+
         // Navigate to the document view page
         router.push(`/documents/${document.id}`);
       } else {
@@ -153,15 +178,25 @@ export default function GeneratePage() {
     <div className="container mx-auto px-6 py-8">
       {/* Header */}
       <div className="mb-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push('/')}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Templates
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Templates
+          </Button>
+
+          {/* Usage Meter */}
+          <div className="w-48">
+            <UsageMeter
+              label="Documents Generated"
+              used={documentsGenerated}
+              limit={DEMO_LIMITS.documents.maxDocumentsPerSession}
+            />
+          </div>
+        </div>
 
         <div className="flex items-start gap-4">
           <div className="p-3 rounded-lg bg-primary/10">
@@ -175,6 +210,34 @@ export default function GeneratePage() {
           </div>
         </div>
       </div>
+
+      {/* Limit Reached Warning */}
+      {limitReached && (
+        <Card className="mb-6 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-amber-700 dark:text-amber-400">
+                <Warning className="h-5 w-5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Document Limit Reached</p>
+                  <p className="text-sm text-amber-600 dark:text-amber-500">
+                    You&apos;ve generated {DEMO_LIMITS.documents.maxDocumentsPerSession} documents this session. Upgrade for unlimited access.
+                  </p>
+                </div>
+              </div>
+              <a
+                href="https://case.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 whitespace-nowrap"
+              >
+                Upgrade Now
+                <ArrowSquareOut className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Error banner */}
       {error && (
