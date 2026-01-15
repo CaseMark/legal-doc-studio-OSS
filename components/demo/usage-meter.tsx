@@ -7,9 +7,10 @@ interface UsageMeterProps {
   used: number;
   limit: number;
   className?: string;
+  timeRemaining?: string;
 }
 
-export function UsageMeter({ label, used, limit, className }: UsageMeterProps) {
+export function UsageMeter({ label, used, limit, className, timeRemaining }: UsageMeterProps) {
   const percentage = Math.min(100, (used / limit) * 100);
 
   // Color based on usage level
@@ -36,6 +37,11 @@ export function UsageMeter({ label, used, limit, className }: UsageMeterProps) {
           style={{ width: `${percentage}%` }}
         />
       </div>
+      {timeRemaining && (
+        <p className="text-xs text-muted-foreground">
+          Resets in {timeRemaining}
+        </p>
+      )}
     </div>
   );
 }

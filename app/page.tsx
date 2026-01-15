@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TemplateSelector } from "@/components/documents";
 import { UsageMeter } from "@/components/demo/usage-meter";
 import { DEMO_LIMITS } from "@/lib/demo-limits/config";
-import { getSessionStats } from "@/lib/demo-limits/session-storage";
+import { getSessionStats, getTimeRemaining } from "@/lib/demo-limits/session-storage";
 import {
   FileText,
   FolderOpen,
@@ -19,15 +19,22 @@ export default function HomePage() {
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
   const [documentsGenerated, setDocumentsGenerated] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState("");
 
   // Load and refresh session stats
   useEffect(() => {
     const loadStats = () => {
       const stats = getSessionStats();
       setDocumentsGenerated(stats.documentsGenerated);
+      setTimeRemaining(getTimeRemaining());
     };
 
     loadStats();
+
+    // Update time remaining every minute
+    const interval = setInterval(() => {
+      setTimeRemaining(getTimeRemaining());
+    }, 60000);
 
     // Listen for storage changes (for updates from other tabs/pages)
     const handleStorageChange = (e: StorageEvent) => {
@@ -45,6 +52,7 @@ export default function HomePage() {
     window.addEventListener('focus', handleFocus);
 
     return () => {
+      clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleFocus);
     };
@@ -71,11 +79,12 @@ export default function HomePage() {
         <div className="container mx-auto px-6 py-8">
           {/* Header with usage meter and case.dev badge */}
           <div className="flex items-center justify-between mb-4">
-            <div className="w-48">
+            <div className="w-56">
               <UsageMeter
                 label="Documents Generated"
                 used={documentsGenerated}
                 limit={DEMO_LIMITS.documents.maxDocumentsPerSession}
+                timeRemaining={timeRemaining}
               />
             </div>
             <a
