@@ -26,7 +26,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { DocumentPreview } from '@/components/documents/document-preview';
-import { getDocument, deleteDocument, updateDocument } from '@/lib/storage/document-db';
+import { getDocument, deleteDocument, updateDocument } from '@/lib/storage/vault-storage';
 import { getTemplateById } from '@/lib/templates';
 import type { GeneratedDocument, DocumentTemplate } from '@/lib/types';
 

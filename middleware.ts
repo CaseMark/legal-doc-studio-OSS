@@ -36,8 +36,11 @@ import type { NextRequest } from "next/server";
  * - "disabled": No route protection (for MVPs, prototypes)
  * - "public-by-default": Only protect routes in `protectedRoutes`
  * - "private-by-default": Protect everything except `publicRoutes`
+ *
+ * Note: For this open-source version, authentication is handled client-side
+ * via Case API keys stored in localStorage. Middleware auth is disabled.
  */
-const AUTH_MODE: "disabled" | "public-by-default" | "private-by-default" = "public-by-default";
+const AUTH_MODE: "disabled" | "public-by-default" | "private-by-default" = "disabled";
 
 /**
  * Routes that require authentication (used in "public-by-default" mode)
@@ -75,7 +78,7 @@ const alwaysPublicRoutes = [
   "/api/webhooks",
   "/api/format",    // Document format API
   "/api/llm",       // LLM chat API
-  "/api/demo",      // Demo config API
+  "/api/vaults",    // Vault API endpoints
 ];
 
 // ============================================================================

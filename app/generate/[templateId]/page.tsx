@@ -13,16 +13,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, SpinnerGap, FileText, Warning, ArrowSquareOut } from '@phosphor-icons/react';
 import { FormWizard } from '@/components/documents/form-wizard';
+import { ApiKeyModal } from '@/components/api-key-modal';
 import { getTemplateById } from '@/lib/templates';
-import { saveDocument } from '@/lib/storage/document-db';
+import { saveDocument } from '@/lib/storage/vault-storage';
 import { processTemplate } from '@/lib/case-api';
-import { UsageMeter } from '@/components/demo/usage-meter';
-import { DEMO_LIMITS } from '@/lib/demo-limits/config';
-import {
-  getSessionStats,
-  incrementDocumentsGenerated,
-  hasReachedDocumentLimit
-} from '@/lib/demo-limits/session-storage';
+import { hasApiKey } from '@/lib/api-key-storage';
 import type { DocumentTemplate, GeneratedDocument } from '@/lib/types';
 
 export default function GeneratePage() {
@@ -34,24 +29,25 @@ export default function GeneratePage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [documentsGenerated, setDocumentsGenerated] = useState(0);
-  const [limitReached, setLimitReached] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
-  // Load template and session stats on mount
+  // Load template on mount
   useEffect(() => {
     const loadTemplate = () => {
       try {
+        // Check for API key first
+        if (!hasApiKey()) {
+          setShowApiKeyModal(true);
+          setLoading(false);
+          return;
+        }
+
         const foundTemplate = getTemplateById(templateId);
         if (foundTemplate) {
           setTemplate(foundTemplate);
         } else {
           setError(`Template "${templateId}" not found`);
         }
-
-        // Load session stats
-        const stats = getSessionStats();
-        setDocumentsGenerated(stats.documentsGenerated);
-        setLimitReached(hasReachedDocumentLimit());
       } catch (err) {
         console.error('Failed to load template:', err);
         setError('Failed to load template');
@@ -61,18 +57,21 @@ export default function GeneratePage() {
     };
 
     loadTemplate();
-  }, [templateId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId]); // Only re-run when templateId changes
+
+  const handleApiKeySuccess = () => {
+    setShowApiKeyModal(false);
+    // Reload template after API key is configured
+    const foundTemplate = getTemplateById(templateId);
+    if (foundTemplate) {
+      setTemplate(foundTemplate);
+    }
+  };
 
   // Handle form completion - generate document
   const handleComplete = useCallback(async (values: Record<string, string | number | boolean>) => {
     if (!template) return;
-
-    // Check if limit has been reached
-    if (hasReachedDocumentLimit()) {
-      setLimitReached(true);
-      setError('You have reached the document generation limit for this session.');
-      return;
-    }
 
     setGenerating(true);
     setError(null);
@@ -96,14 +95,10 @@ export default function GeneratePage() {
         updatedAt: now,
       };
 
-      // Save to IndexedDB
+      // Save to vault
       const saved = await saveDocument(document);
 
       if (saved) {
-        // Increment documents generated count
-        incrementDocumentsGenerated();
-        setDocumentsGenerated(prev => prev + 1);
-
         // Navigate to the document view page
         router.push(`/documents/${document.id}`);
       } else {
@@ -176,6 +171,9 @@ export default function GeneratePage() {
   // Main form wizard
   return (
     <div className="container mx-auto px-6 py-8">
+      {/* API Key Modal */}
+      {showApiKeyModal && <ApiKeyModal onSuccess={handleApiKeySuccess} />}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -188,14 +186,6 @@ export default function GeneratePage() {
             Back to Templates
           </Button>
 
-          {/* Usage Meter */}
-          <div className="w-48">
-            <UsageMeter
-              label="Documents Generated"
-              used={documentsGenerated}
-              limit={DEMO_LIMITS.documents.maxDocumentsPerSession}
-            />
-          </div>
         </div>
 
         <div className="flex items-start gap-4">
@@ -210,34 +200,6 @@ export default function GeneratePage() {
           </div>
         </div>
       </div>
-
-      {/* Limit Reached Warning */}
-      {limitReached && (
-        <Card className="mb-6 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-amber-700 dark:text-amber-400">
-                <Warning className="h-5 w-5 flex-shrink-0" />
-                <div>
-                  <p className="font-medium">Document Limit Reached</p>
-                  <p className="text-sm text-amber-600 dark:text-amber-500">
-                    You&apos;ve generated {DEMO_LIMITS.documents.maxDocumentsPerSession} documents this session. Upgrade for unlimited access.
-                  </p>
-                </div>
-              </div>
-              <a
-                href="https://case.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 whitespace-nowrap"
-              >
-                Upgrade Now
-                <ArrowSquareOut className="h-3.5 w-3.5" />
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Error banner */}
       {error && (
