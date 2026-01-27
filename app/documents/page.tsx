@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents";
-import { listDocuments, deleteDocument } from "@/lib/storage/document-db";
-import { 
-  ArrowLeft, 
+import { ApiKeyModal } from "@/components/api-key-modal";
+import { listDocuments, deleteDocument } from "@/lib/storage/vault-storage";
+import { hasApiKey } from "@/lib/api-key-storage";
+import {
+  ArrowLeft,
   Plus,
   SpinnerGap
 } from "@phosphor-icons/react";
@@ -16,11 +18,23 @@ export default function DocumentsPage() {
   const router = useRouter();
   const [documents, setDocuments] = useState<GeneratedDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
-  // Load documents on mount
+  // Check for API key and load documents on mount
   useEffect(() => {
+    if (!hasApiKey()) {
+      setShowApiKeyModal(true);
+      setLoading(false);
+      return;
+    }
     loadDocuments();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  const handleApiKeySuccess = () => {
+    setShowApiKeyModal(false);
+    loadDocuments();
+  };
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -62,6 +76,9 @@ export default function DocumentsPage() {
 
   return (
     <main className="min-h-screen bg-background">
+      {/* API Key Modal */}
+      {showApiKeyModal && <ApiKeyModal onSuccess={handleApiKeySuccess} />}
+
       {/* Header */}
       <div className="border-b">
         <div className="container mx-auto px-6 py-4">

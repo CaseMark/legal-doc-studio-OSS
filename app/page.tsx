@@ -1,12 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TemplateSelector } from "@/components/documents";
-import { UsageMeter } from "@/components/demo/usage-meter";
-import { DEMO_LIMITS } from "@/lib/demo-limits/config";
-import { getSessionStats, getTimeRemaining } from "@/lib/demo-limits/session-storage";
 import {
   FileText,
   FolderOpen,
@@ -18,45 +15,6 @@ import type { DocumentTemplate } from "@/lib/types";
 export default function HomePage() {
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
-  const [documentsGenerated, setDocumentsGenerated] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState("");
-
-  // Load and refresh session stats
-  useEffect(() => {
-    const loadStats = () => {
-      const stats = getSessionStats();
-      setDocumentsGenerated(stats.documentsGenerated);
-      setTimeRemaining(getTimeRemaining());
-    };
-
-    loadStats();
-
-    // Update time remaining every minute
-    const interval = setInterval(() => {
-      setTimeRemaining(getTimeRemaining());
-    }, 60000);
-
-    // Listen for storage changes (for updates from other tabs/pages)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'legal-doc-studio-session') {
-        loadStats();
-      }
-    };
-
-    // Also refresh when window gains focus (for same-tab updates)
-    const handleFocus = () => {
-      loadStats();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
 
   const handleTemplateSelect = (template: DocumentTemplate) => {
     setSelectedTemplate(template);
@@ -77,16 +35,8 @@ export default function HomePage() {
       {/* Hero Section */}
       <div className="border-b bg-gradient-to-b from-muted/50 to-background">
         <div className="container mx-auto px-6 py-8">
-          {/* Header with usage meter and case.dev badge */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-56">
-              <UsageMeter
-                label="Documents Generated"
-                used={documentsGenerated}
-                limit={DEMO_LIMITS.documents.maxDocumentsPerSession}
-                timeRemaining={timeRemaining}
-              />
-            </div>
+          {/* Header with case.dev badge */}
+          <div className="flex items-center justify-end mb-4">
             <a
               href="https://case.dev"
               target="_blank"
