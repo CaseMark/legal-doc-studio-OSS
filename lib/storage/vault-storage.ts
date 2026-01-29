@@ -558,8 +558,7 @@ export async function searchDocuments(
   if (!query.trim()) return listDocuments();
 
   try {
-    // For now, list all and filter client-side
-    // TODO: Implement vault semantic search
+    // List all and filter client-side (vault semantic search available for future enhancement)
     const allDocuments = await listDocuments();
 
     const lowerQuery = query.toLowerCase();

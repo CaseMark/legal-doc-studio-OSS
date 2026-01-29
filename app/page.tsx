@@ -110,8 +110,8 @@ export default function HomePage() {
           />
           <FeatureCard
             icon={<FolderOpen size={24} className="text-primary" />}
-            title="Local Storage"
-            description="Your documents stay on your device. Export to PDF, DOCX, or HTML."
+            title="Secure Storage"
+            description="Documents stored in your personal vault. Export to PDF, DOCX, or HTML."
           />
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function HomePage() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>Legal Document Studio • Powered by Case.dev</p>
-            <p>All documents are stored locally in your browser</p>
+            <p>Documents are stored securely in your Case.dev vault</p>
           </div>
         </div>
       </footer>
