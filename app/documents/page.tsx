@@ -98,7 +98,7 @@ export default function DocumentsPage() {
                   My Documents
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  {documents.length} document{documents.length !== 1 ? "s" : ""} stored locally
+                  {documents.length} document{documents.length !== 1 ? "s" : ""} in your vault
                 </p>
               </div>
             </div>

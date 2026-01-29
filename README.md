@@ -1,84 +1,85 @@
-# Create Legal App
+# Legal Document Studio
 
-**The Agent-Optimized Legal Tech Starter Kit.**
+Generate professional legal documents with AI assistance. Built with Next.js and [Case.dev](https://case.dev).
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Next.js](https://img.shields.io/badge/Next.js-15.1-black)](https://nextjs.org)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38bdf8)](https://tailwindcss.com)
+## Features
 
-> 🤖 **Built for Agents**: This repository is designed to be read by AI agents. It includes comprehensive internal documentation (`AGENTS.md` and `skills/`) that guides LLMs in generating production-ready legal tech code.
+- **Document Templates**: Employment agreements, NDAs, contractor agreements, consulting agreements, and residential leases
+- **AI-Assisted Input**: Describe your needs in plain English and let AI fill in form fields
+- **Cloud Storage**: Documents stored securely in your personal Case.dev vault
+- **Export Options**: Download as PDF, DOCX, or HTML
 
-## 🚀 Overview
+## Case.dev Primitives
 
-`create-legal-app` is a modern, opinionated starter kit for building legal technology applications. It provides a solid foundation with Next.js 15, Shadcn UI (Maia theme), and a structure pre-configured for complex legal workflows like document analysis, case management, and secure vaults.
+This application uses the following Case.dev APIs:
 
-**What makes this different?**
-Most starter kits are just code. This kit includes **Instructional Metadata** (Skills) that teach your AI coding assistant (Cursor, Windsurf, etc.) *exactly* how to implement semantic search, OCR pipelines, and legal-specific workflows using the Case.dev SDK.
+| Primitive | Purpose |
+|-----------|---------|
+| **Vaults** | Secure document storage with metadata |
+| **LLM API** | Natural language parsing for form auto-fill |
+| **Format API** | PDF and DOCX document conversion |
 
-## ✨ Features & Stack
+## Getting Started
 
-- **Framework**: [Next.js 15](https://nextjs.org) (App Router)
-- **Language**: TypeScript
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com) + [Shadcn UI](https://ui.shadcn.com) (Maia Preset)
-- **Font**: [Inter](https://rsms.me/inter/) & [Spectral](https://fonts.google.com/specimen/Spectral) (Serif for legal texts)
-- **Package Manager**: [Bun](https://bun.sh)
-- **Agent Skill System**: Dedicated documentation in `skills/` for:
-    - `case-dev`: Legal AI, Vaults, OCR
-    - `database`: Neon / Postgres schemas (Schema ready)
-    - `auth`: Authentication patterns
-
-## 🛠️ Getting Started
-
-### 1. Initialize the Project
+### 1. Clone and Install
 
 ```bash
-git clone https://github.com/CaseMark/create-legal-app.git my-legal-startup
-cd my-legal-startup
+git clone https://github.com/CaseMark/legal-doc-studio-OSS.git
+cd legal-doc-studio-OSS
 bun install
 ```
 
 ### 2. Configure Environment
 
-Copy the example environment file:
-
 ```bash
 cp .env.example .env.local
 ```
 
-Fill in your API keys (get your Case.dev keys from the [Case.dev Console](https://console.case.dev)):
+Add your Case.dev API key to `.env.local`:
 
 ```env
-# .env.local
-CASE_API_KEY=sk_case_...
-DATABASE_URL=postgres://...
+CASE_API_KEY=sk_case_your_key_here
 ```
 
-### 3. Run Development Server
+Get your API key from the [Case.dev Console](https://console.case.dev).
+
+### 3. Run
 
 ```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the starter page.
+Open [http://localhost:3000](http://localhost:3000).
 
-## 🤖 For AI Agents
+On first use, you'll be prompted to enter your Case.dev API key. This key is stored in your browser's localStorage and used for vault operations.
 
-**Are you an AI?** Start by reading **[AGENTS.md](./AGENTS.md)**.
+## Project Structure
 
-1.  **Context**: Read `AGENTS.md` to understand the project architecture and principles.
-2.  **Skills**: Before implementing a feature, check the `skills/` directory. For example, if the user asks for "Document Upload", read `skills/case-dev/SKILL.md`.
-3.  **Conventions**: stricta file naming and `kebab-case` for utilities.
+```
+app/
+  api/
+    vaults/       # Document storage endpoints
+    llm/          # AI chat completion
+    format/       # PDF/DOCX conversion
+  documents/      # Document list and viewer
+  generate/       # Document generation wizard
+components/
+  documents/      # Template selector, document cards
+  ui/             # Shadcn UI components
+lib/
+  vault-client.ts # Case.dev Vault SDK wrapper
+  case-api.ts     # LLM and format API integration
+  templates.ts    # Document template definitions
+```
 
-## 📚 Documentation Structure
+## Tech Stack
 
-- **`/app`**: Next.js App Router (Pages, Layouts, API Routes)
-- **`/components`**: React components (UI primitives in `/ui`, custom in root)
-- **`/lib`**: Shared utilities (Place your `case-dev` client here)
-- **`/skills`**: **The Brain**. Contains Markdown files specifically for AI context.
-    - `/case-dev`: SDK usage, Vaults, Workflows
-    - `/database`: Schema design patterns
-    - `/auth`: Auth flow documentation
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + Shadcn UI
+- **Icons**: Phosphor Icons
+- **Runtime**: Bun
 
-## 📄 License
+## License
 
-This project is licensed under the [Apache 2.0 License](LICENSE).
+[Apache 2.0](LICENSE)

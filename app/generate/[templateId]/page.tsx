@@ -4,7 +4,7 @@
  * Generate Document Page
  *
  * Multi-step wizard for generating a document from a template.
- * Uses the FormWizard component and saves to IndexedDB.
+ * Uses the FormWizard component and saves to the user's Case.dev vault.
  */
 
 import { useEffect, useState, useCallback } from 'react';
